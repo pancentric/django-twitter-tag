@@ -5,10 +5,8 @@ import logging
 
 from django import template
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import timezone
 
-from twitter import Twitter, OAuth, TwitterError
 from classytags.core import Tag, Options
 from classytags.arguments import Argument, MultiKeywordArgument
 
@@ -24,9 +22,6 @@ register = template.Library()
 
 class BaseTwitterTag(Tag):
     """ Abstract twitter tag"""
-
-    def get_cache_key(self, args_disct):
-        raise NotImplementedError
 
     def get_json(self, twitter):
         raise NotImplementedError
@@ -47,25 +42,19 @@ class BaseTwitterTag(Tag):
         return tweet
 
     def render_tag(self, context, **kwargs):
-        cache_key = self.get_cache_key(kwargs)
-
         try:
-            twitter = Twitter(auth=OAuth(settings.TWITTER_OAUTH_TOKEN,
-                                         settings.TWITTER_OAUTH_SECRET,
-                                         settings.TWITTER_CONSUMER_KEY,
-                                         settings.TWITTER_CONSUMER_SECRET))
-            json = self.get_json(twitter, **self.get_api_call_params(**kwargs))
+            json = self.get_json(**self.get_api_call_params(**kwargs))
         except (TwitterError, URLError, ValueError, http_client.HTTPException) as e:
             logging.getLogger(__name__).error(str(e))
-            context[kwargs['asvar']] = cache.get(cache_key, [])
+            context[kwargs['asvar']] = ''
             return ''
 
-        json = [self.enrich(tweet) for tweet in json]
+        if json:
+            json = [self.enrich(tweet) for tweet in json]
 
-        if kwargs['limit']:
-            json = json[:kwargs['limit']]
-        context[kwargs['asvar']] = json
-        cache.set(cache_key, json)
+            if kwargs['limit']:
+                json = json[:kwargs['limit']]
+            context[kwargs['asvar']] = json
 
         return ''
 
@@ -96,9 +85,6 @@ class UserTag(BaseTwitterTag):
         'limit', Argument('limit', required=False),
     )
 
-    def get_cache_key(self, kwargs_dict):
-        return get_user_cache_key(**kwargs_dict)
-
     def get_api_call_params(self, **kwargs):
         params = {'screen_name': kwargs['username']}
         if kwargs['exclude']:
@@ -108,8 +94,8 @@ class UserTag(BaseTwitterTag):
                 params['include_rts'] = False
         return params
 
-    def get_json(self, twitter, **kwargs):
-        return twitter.statuses.user_timeline(**kwargs)
+    def get_json(self, **kwargs):
+        return get_user_tweets(**kwargs)
 
 
 class SearchTag(BaseTwitterTag):
@@ -121,16 +107,13 @@ class SearchTag(BaseTwitterTag):
         'limit', Argument('limit', required=False),
     )
 
-    def get_cache_key(self, kwargs_dict):
-        return get_search_cache_key(kwargs_dict)
-
     def get_api_call_params(self, **kwargs):
         params = {'q': kwargs['q'].encode('utf-8')}
         params.update(kwargs['options'])
         return params
 
-    def get_json(self, twitter, **kwargs):
-        return twitter.search.tweets(**kwargs)['statuses']
+    def get_json(self, **kwargs):
+        return get_search_tweets(**kwargs)
 
 
 register.tag(UserTag)

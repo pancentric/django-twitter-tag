@@ -5,23 +5,9 @@ try:
 except ImportError:
     from urllib.parse import quote
 
-
-def get_user_cache_key(**kwargs):
-    """ Generate suitable key to cache twitter tag context
-    """
-    key = 'get_tweets_%s' % ('_'.join([str(kwargs[key]) for key in sorted(kwargs) if kwargs[key]]))
-    not_allowed = re.compile('[^%s]' % ''.join([chr(i) for i in range(33, 128)]))
-    key = not_allowed.sub('', key)
-    return key
-
-
-def get_search_cache_key(prefix, *args):
-    """ Generate suitable key to cache twitter tag context
-    """
-    key = '%s_%s' % (prefix, '_'.join([str(arg) for arg in args if arg]))
-    not_allowed = re.compile('[^%s]' % ''.join([chr(i) for i in range(33, 128)]))
-    key = not_allowed.sub('', key)
-    return key
+from cacheback.decorators import cacheback
+from django.conf import settings
+from twitter import Twitter, OAuth, TwitterError
 
 
 TWITTER_HASHTAG_URL = '<a href="https://twitter.com/search?q=%%23%s">#%s</a>'
@@ -57,3 +43,29 @@ def expand_tweet_urls(tweet):
         text = text.replace(url['url'], '<a href="%s">%s</a>' % (url['expanded_url'], url['display_url']))
     tweet['html'] = text
     return tweet
+
+
+def get_twitter_object():
+    return Twitter(auth=OAuth(settings.TWITTER_OAUTH_TOKEN,
+                             settings.TWITTER_OAUTH_SECRET,
+                             settings.TWITTER_CONSUMER_KEY,
+                             settings.TWITTER_CONSUMER_SECRET))
+
+@cacheback(lifetime=300)
+def get_user_tweets(**kwargs):
+    '''
+    Function moved out from UserTag.get_json so cacheback can call it.
+    '''
+    twitter = get_twitter_object()
+    tweets = twitter.statuses.user_timeline(**kwargs)
+    return [tweet for tweet in tweets]
+
+
+@cacheback(lifetime=300)
+def get_search_tweets(**kwargs):
+    '''
+    Function moved out from SearchTag.get_json so cacheback can call it.
+    '''
+    twitter = get_twitter_object()
+    tweets = twitter.search.tweets(**kwargs)['statuses']
+    return [tweet for tweet in tweets]

@@ -1,11 +1,10 @@
 Django Twitter Tag
 ==================
 
-.. image:: https://secure.travis-ci.org/coagulant/django-twitter-tag.png?branch=dev
-    :target: https://travis-ci.org/coagulant/django-twitter-tag
+This is the Pancentric fork of Django Twitter Tag. We added django-cacheback
+and Celery so that users never have to wait for us to fetch new tweets -
+fetching is done in a background task queue.
 
-.. image:: https://coveralls.io/repos/coagulant/django-twitter-tag/badge.png?branch=dev
-    :target: https://coveralls.io/r/coagulant/django-twitter-tag/
 
 A django template tag to display user's recent tweets / search results.
 Version 1.0 uses Twitter API 1.1.
