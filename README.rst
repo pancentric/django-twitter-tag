@@ -142,7 +142,7 @@ Caching
 
 There is no need to use any django cache template tags as suggested in the upstream
 project's documentation. You will want to configure CACHES in settings.py to be
-something like this so that the task jobs can put the results in the shared location.
+something like this so that the task jobs can put the results in the shared location::
 
     CACHES = {
         'default': {
