@@ -13,6 +13,11 @@ from twitter import Twitter, OAuth, TwitterError
 TWITTER_HASHTAG_URL = '<a href="https://twitter.com/search?q=%%23%s">#%s</a>'
 TWITTER_USERNAME_URL = '<a href="https://twitter.com/%s">@%s</a>'
 
+try:
+    TWITTER_CACHE_TIMEOUT = settings.TWITTER_CACHE_TIMEOUT
+except AttributeError:
+    TWITTER_CACHE_TIMEOUT = 300
+
 
 def urlize_tweet(tweet):
     """ Turn #hashtag and @username in a text to Twitter hyperlinks,
@@ -51,7 +56,7 @@ def get_twitter_object():
                              settings.TWITTER_CONSUMER_KEY,
                              settings.TWITTER_CONSUMER_SECRET))
 
-@cacheback(lifetime=300)
+@cacheback(lifetime=TWITTER_CACHE_TIMEOUT)
 def get_user_tweets(**kwargs):
     '''
     Function moved out from UserTag.get_json so cacheback can call it.
@@ -61,7 +66,7 @@ def get_user_tweets(**kwargs):
     return [tweet for tweet in tweets]
 
 
-@cacheback(lifetime=300)
+@cacheback(lifetime=TWITTER_CACHE_TIMEOUT)
 def get_search_tweets(**kwargs):
     '''
     Function moved out from SearchTag.get_json so cacheback can call it.

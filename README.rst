@@ -49,12 +49,18 @@ This app works with python 2.6, 2.7 and 3.3, Django 1.3-1.5.
 
 Recommended way to install is pip::
 
-  pip install django-twitter-tag
+  pip install -e git+https://github.com/pancentric/django-twitter-tag.git#egg=django-twitter-tag
+
+We use Redis as our Celery message broker so you probably want to install the following::
+
+  pip install django-celery-with-redis==3.0
 
 
 Add ``twitter_tag`` to ``INSTALLED_APPS`` in settings.py::
 
     INSTALLED_APPS = (...
+                      'cacheback',
+                      'djcelery',
                       'twitter_tag',
                       ...
                      )
@@ -81,8 +87,12 @@ Here is an example of how your config might look like::
     # OAuth settings: Consumer secret
     TWITTER_CONSUMER_SECRET = 'YBD6GyFpvumNbNA218RAphszFnkifxR8K9h8Rdtq1A'
 
-For best performance you should set up `django cache framework`_. Cache is used both internally
-to store last successful json response and externally (see Caching below).
+    TWITTER_CACHE_TIMEOUT = 300
+
+    BROKER_URL = _get_env_variable('BROKER_URL', default='redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = BROKER_URL
+    CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+
 
 .. _API 1.1: https://dev.twitter.com/docs/api/1.1
 .. _create an application: https://dev.twitter.com/apps
@@ -130,15 +140,19 @@ Relevant `API docs for search`_.
 Caching
 -------
 
-It's strongly advised to use template caching framework to reduce the amount of twitter API calls
-and avoid reaching `rate limit`_ (currently, 180 reqs in 15 minutes)::
+There is no need to use any django cache template tags as suggested in the upstream
+project's documentation. You will want to configure CACHES in settings.py to be
+something like this so that the task jobs can put the results in the shared location.
 
-    {% load twitter_tag cache %}
-    {% cache 60 my_tweets %}
-    {% get_tweets for "futurecolors" as tweets exclude "retweets" %}
-    ...
-    {% endcache %}
-
+    CACHES = {
+        'default': {
+            'BACKEND': 'redis_cache.cache.RedisCache',
+            'LOCATION': _get_env_variable('REDIS_LOCATION'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'redis_cache.client.DefaultClient',
+            }
+        }
+    }
 
 .. _rate limit: https://dev.twitter.com/docs/rate-limiting/1.1
 
