@@ -28,12 +28,12 @@ setup(
         "twitter==1.9.1",
         "django-appconf==0.6",
         'six==1.2.0',
-        'django-cacheback==0.7',
+        # 'django-cacheback==0.7',
     ],
     tests_require=tests_require,
-    test_suite = "nose.collector",
+    test_suite="nose.collector",
     extras_require={'test': tests_require},
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Framework :: Django',
         'Intended Audience :: Developers',
