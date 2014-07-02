@@ -7,6 +7,9 @@ except ImportError:
 
 from cacheback.decorators import cacheback
 from django.conf import settings
+from django.core.cache import cache
+from hashlib import md5
+import json
 from twitter import Twitter, OAuth, TwitterError
 
 
@@ -61,6 +64,11 @@ def get_user_tweets(**kwargs):
     '''
     Function moved out from UserTag.get_json so cacheback can call it.
     '''
+    cache_key = 'django-twitter-tag:get_user_tweets:{}'.format(md5(json.dumps(kwargs, sort_keys=True)).hexdigest())
+    if cache.get(cache_key):
+        # Prevent hammering the API when rate limiting happens
+        return
+    cache.set(cache_key, True, TWITTER_CACHE_TIMEOUT)
     twitter = get_twitter_object()
     tweets = twitter.statuses.user_timeline(**kwargs)
     return [tweet for tweet in tweets]
@@ -71,6 +79,11 @@ def get_search_tweets(**kwargs):
     '''
     Function moved out from SearchTag.get_json so cacheback can call it.
     '''
+    cache_key = 'django-twitter-tag:get_search_tweets:{}'.format(md5(json.dumps(kwargs, sort_keys=True)).hexdigest())
+    if cache.get(cache_key):
+        # Prevent hammering the API when rate limiting happens
+        return
+    cache.set(cache_key, True, TWITTER_CACHE_TIMEOUT)
     twitter = get_twitter_object()
     tweets = twitter.search.tweets(**kwargs)['statuses']
     return [tweet for tweet in tweets]
