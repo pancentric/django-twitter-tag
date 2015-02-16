@@ -26,7 +26,7 @@ setup(
     install_requires=[
         "django-classy-tags==0.4",
         "twitter==1.9.1",
-        "django-appconf==0.6",
+        "django-appconf==1.0.1",
         'six==1.2.0',
         # 'django-cacheback==0.7',
     ],
